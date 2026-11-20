@@ -1,0 +1,6 @@
+[plugininstall]
+description=OpenWrt APK v3 reader for Total Commander
+type=wcx
+file=apkview.wcx
+defaultdir=apkview
+defaultextension=apk
