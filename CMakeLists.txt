@@ -82,6 +82,6 @@ endif()
 
 if(NOT APKVIEW_NO_ZLIB)
   install(TARGETS apkview RUNTIME DESTINATION .)
-  install(FILES README.md packaging/pluginst.inf DESTINATION .)
+  install(FILES LICENSE README.md README_en.md packaging/pluginst.inf DESTINATION .)
   install(FILES "${zlib_SOURCE_DIR}/LICENSE" DESTINATION . RENAME LICENSE-zlib.txt)
 endif()

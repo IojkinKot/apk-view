@@ -62,6 +62,10 @@ For Win32, replace `x64` with `x86`. The DLL test calls the same plugin exports 
 - Limits: 16 MiB of metadata, 50,000 entries, 8 MiB of indexed names, 64 components per path, and an 8 GiB uncompressed stream.
 - Compression applies to the entire stream, so per-file compressed sizes are not displayed.
 
+## License
+
+The plugin is licensed under the GNU Affero General Public License, version 3 only (`AGPL-3.0-only`). See [LICENSE](LICENSE) for the full text. zlib is distributed under its [own license](https://zlib.net/zlib_license.html), included in the installer ZIP as `LICENSE-zlib.txt`.
+
 ## References
 
 - [Total Commander Packer Plugin SDK](https://ghisler.github.io/WCX-SDK/table_of_contents.htm)
