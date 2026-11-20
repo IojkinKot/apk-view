@@ -14,7 +14,7 @@ jobs:
     name: Build Windows x86 and x64
     runs-on: windows-2022
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
@@ -55,7 +55,7 @@ jobs:
           }
 
       - name: Upload installer ZIP
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        uses: actions/upload-artifact@v7
         with:
           name: apkview-windows
           path: dist/apkview.zip
@@ -71,7 +71,7 @@ jobs:
       contents: write
     steps:
       - name: Download installer ZIP
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@v8
         with:
           name: apkview-windows
           path: release
