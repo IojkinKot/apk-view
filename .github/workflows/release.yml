@@ -1,0 +1,83 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows x86 and x64
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Build, test and package
+        shell: pwsh
+        run: |
+          $PSNativeCommandUseErrorActionPreference = $true
+          $stage = Join-Path $env:RUNNER_TEMP ('apkview-' + [guid]::NewGuid().ToString('N'))
+          foreach ($arch in 'x86', 'x64') {
+            $preset = "win-$arch"
+            cmake --preset $preset
+            if ($env:GITHUB_EVENT_NAME -eq 'push' -and $env:GITHUB_REF_TYPE -eq 'tag') {
+              $version = Select-String -LiteralPath "build/$preset/CMakeCache.txt" -Pattern '^CMAKE_PROJECT_VERSION:STATIC=(.+)$'
+              if (!$version) { throw 'CMake project version not found.' }
+              $expectedTag = 'v' + $version.Matches[0].Groups[1].Value
+              if ($env:GITHUB_REF_NAME -cne $expectedTag) {
+                throw "Tag $env:GITHUB_REF_NAME does not match the CMake project version (expected $expectedTag)."
+              }
+            }
+            cmake --build --preset "$preset-release"
+            ctest --preset "$preset-release" --no-tests=error
+            cmake --install "build/$preset" --config Release --prefix $stage
+          }
+
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          $zip = 'dist/apkview.zip'
+          Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
+
+          $expected = 'apkview.wcx', 'apkview.wcx64', 'pluginst.inf', 'README.md', 'README_en.md', 'LICENSE', 'LICENSE-zlib.txt'
+          $archive = [IO.Compression.ZipFile]::OpenRead((Resolve-Path -LiteralPath $zip).Path)
+          try {
+            $entries = @($archive.Entries | ForEach-Object FullName)
+            if (Compare-Object -ReferenceObject $expected -DifferenceObject $entries -CaseSensitive) {
+              throw "Unexpected ZIP contents: $($entries -join ', ')"
+            }
+          } finally {
+            $archive.Dispose()
+          }
+
+      - name: Upload installer ZIP
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: apkview-windows
+          path: dist/apkview.zip
+          if-no-files-found: error
+          compression-level: 0
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download installer ZIP
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        with:
+          name: apkview-windows
+          path: release
+
+      - name: Create GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes -- "$GITHUB_REF_NAME" release/apkview.zip
