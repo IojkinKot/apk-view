@@ -35,9 +35,7 @@ struct Context {
     int mode{}, failure{};
     bool pending{}, finished{};
     tProcessDataProcW progressW{};
-#ifndef _WIN64
     tProcessDataProc progressA{};
-#endif
 };
 Context& context(HANDLE h){if(!h)throw Status{E_BAD_ARCHIVE};return *static_cast<Context*>(h);}
 HANDLE open(const wchar_t* path,int mode){
@@ -87,7 +85,6 @@ template<class Char> void lengths(HeaderDataEx<Char>& out,const apk::Entry& entr
     out.PackSize=0;out.PackSizeHigh=0;
     out.UnpSize=static_cast<unsigned>(entry.size);out.UnpSizeHigh=static_cast<unsigned>(entry.size>>32);
 }
-#ifndef _WIN64
 std::wstring from_ansi(const char* text){
     if(!text)return {};
     const int len=MultiByteToWideChar(CP_ACP,MB_ERR_INVALID_CHARS,text,-1,nullptr,0);
@@ -107,7 +104,6 @@ std::string to_ansi(const std::wstring& text){
     if(!WideCharToMultiByte(codePage,flags,text.c_str(),-1,s.data(),len,nullptr,indicator)||used)throw Status{E_SMALL_BUF};
     s.pop_back();return s;
 }
-#endif
 class Sha256 {
     BCRYPT_ALG_HANDLE alg_{};
     BCRYPT_HASH_HANDLE hash_{};
@@ -135,13 +131,11 @@ void progress(Context& ctx,int size){
     const auto& name=ctx.names[ctx.index].name;
     int proceed=1;
     if(ctx.progressW){auto value=name;proceed=ctx.progressW(value.data(),size);}
-#ifndef _WIN64
     else if(ctx.progressA){
         std::string value;
         try{value=to_ansi(name);}catch(const Status&){}
         proceed=ctx.progressA(value.empty()?nullptr:value.data(),size);
     }
-#endif
     if(!proceed)throw Status{E_EABORTED};
 }
 int process(Context& ctx,int op,const wchar_t* dir,const wchar_t* name){
@@ -203,7 +197,6 @@ int WINAPI GetPackerCaps() noexcept {return PK_CAPS_BY_CONTENT;}
 BOOL WINAPI CanYouHandleThisFileW(WCHAR* path) noexcept {
     try{return path && apk::Package::probe(path);}catch(...){return FALSE;}
 }
-#ifndef _WIN64
 HANDLE WINAPI OpenArchive(tOpenArchiveData* in) noexcept {
     if(!in)return nullptr;
     in->CmtSize=0;in->CmtState=0;
@@ -238,5 +231,4 @@ void WINAPI SetProcessDataProc(HANDLE h,tProcessDataProc callback) noexcept {if(
 BOOL WINAPI CanYouHandleThisFile(char* path) noexcept {
     try{return path && apk::Package::probe(from_ansi(path));}catch(...){return FALSE;}
 }
-#endif
 }

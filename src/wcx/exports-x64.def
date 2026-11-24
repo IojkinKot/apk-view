@@ -7,3 +7,10 @@ EXPORTS
   SetProcessDataProcW
   GetPackerCaps
   CanYouHandleThisFileW
+  OpenArchive
+  ReadHeader
+  ReadHeaderEx
+  ProcessFile
+  SetChangeVolProc
+  SetProcessDataProc
+  CanYouHandleThisFile

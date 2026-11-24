@@ -97,20 +97,22 @@ int wmain(int argc,wchar_t** argv){
             auto dir=root.wstring(); WCHAR name[]=L"renamed.txt";
             check(a.action(PK_EXTRACT,dir.data(),name)==E_BAD_DATA && read_file(root/name)=="abc","hash failure preserves prior file");
         }
-#ifndef _WIN64
         {
             auto open=proc<HANDLE(WINAPI*)(tOpenArchiveData*)>(lib.dll,"OpenArchive");
             auto read=proc<int(WINAPI*)(HANDLE,tHeaderData*)>(lib.dll,"ReadHeader");
+            auto readEx=proc<int(WINAPI*)(HANDLE,tHeaderDataEx*)>(lib.dll,"ReadHeaderEx");
             auto process=proc<int(WINAPI*)(HANDLE,int,char*,char*)>(lib.dll,"ProcessFile");
-            proc<int(WINAPI*)(HANDLE,tHeaderDataEx*)>(lib.dll,"ReadHeaderEx");
             proc<void(WINAPI*)(HANDLE,tProcessDataProc)>(lib.dll,"SetProcessDataProc");
             proc<void(WINAPI*)(HANDLE,tChangeVolProc)>(lib.dll,"SetChangeVolProc");
+            auto probeAnsi=proc<BOOL(WINAPI*)(char*)>(lib.dll,"CanYouHandleThisFile");
+            tOpenArchiveData missing{};
+            check(!open(&missing) && missing.OpenResult==E_EOPEN && !probeAnsi(nullptr),"ANSI rejects a missing path");
             // The path itself may be outside the active ANSI code page; use the W opener.
             Archive a(api,path,PK_OM_LIST); tHeaderData h{};
             check(read(a.h,&h)==0 && std::string_view(h.FileName)=="usr\\share" && process(a.h,PK_SKIP,nullptr,nullptr)==0,"ANSI compatibility");
-            (void)open;
+            tHeaderDataEx extended{};
+            check(readEx(a.h,&extended)==0 && std::string_view(extended.FileName)=="usr\\share\\empty","ANSI extended header");
         }
-#endif
         std::cout<<"WCX DLL tests passed\n"; return 0;
     } catch(const std::exception& e){std::cerr<<e.what()<<'\n';return 1;}
 }
